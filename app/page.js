@@ -80,6 +80,10 @@ export default function Home() {
   const [tab, setTab] = useState("all");
   const [now, setNow] = useState(Date.now());
   const [fetchedAt, setFetchedAt] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [area, setArea] = useState("");
+  const [sending, setSending] = useState(false);
+  const [reportMsg, setReportMsg] = useState("");
 
   async function load() {
     try {
@@ -98,6 +102,32 @@ export default function Home() {
     const refresh = setInterval(load, 5 * 60000);
     return () => { clearInterval(tick); clearInterval(refresh); };
   }, []);
+
+  async function sendReport() {
+    if (area.trim().length < 3) { setReportMsg("Enter your area (at least 3 letters)."); return; }
+    setSending(true); setReportMsg("");
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ area: area.trim() }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setReportMsg("Thanks — your report is on the board.");
+        setReportOpen(false);
+        setArea("");
+        load();
+      } else if (j.error === "rate_limited") {
+        setReportMsg("Too many reports from your connection — try again later.");
+      } else {
+        setReportMsg("Could not send — check the area name and try again.");
+      }
+    } catch {
+      setReportMsg("Could not send — check your connection.");
+    }
+    setSending(false);
+  }
 
   const active = data?.active || [];
   const filtered = useMemo(
@@ -121,6 +151,30 @@ export default function Home() {
         <span className="updated">
           {fetchedAt ? `updated ${fetchedAt.toLocaleTimeString("en-GY", { hour: "numeric", minute: "2-digit" })}` : "loading…"}
         </span>
+      </div>
+
+      <div className="form-grid" style={{ paddingBottom: 6 }}>
+        {!reportOpen ? (
+          <button className="btn ghost" onClick={() => { setReportOpen(true); setReportMsg(""); }}>
+            ⚡ No power in your area? Report it
+          </button>
+        ) : (
+          <>
+            <label>
+              Your area
+              <input
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="e.g. Better Hope, ECD"
+                maxLength={60}
+              />
+            </label>
+            <button className="btn" onClick={sendReport} disabled={sending}>
+              {sending ? "Sending…" : "Report outage"}
+            </button>
+          </>
+        )}
+        {reportMsg && <p className="notice">{reportMsg}</p>}
       </div>
 
       <nav className="tabs" aria-label="Filter outages">
@@ -157,9 +211,9 @@ export default function Home() {
       )}
 
       <footer className="site">
-        Pulled automatically from GPL public advisories, with manual reports for
-        Facebook notices. Not affiliated with Guyana Power &amp; Light. Report an
-        emergency to GPL: Demerara 0475 · Berbice 333-2186.
+        Pulled automatically from GPL public advisories and Guyanese news feeds,
+        plus community reports from residents. Not affiliated with Guyana Power
+        &amp; Light. Report an emergency to GPL: Demerara 0475 · Berbice 333-2186.
         <br />A <a href="https://gplinc.com" target="_blank" rel="noreferrer">gplinc.com</a> companion by MER.
       </footer>
     </div>
