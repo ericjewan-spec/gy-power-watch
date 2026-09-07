@@ -1,1 +1,1 @@
-Deployment trigger for Vercel.
+ Redeploy test. Deployment trigger for Vercel.
