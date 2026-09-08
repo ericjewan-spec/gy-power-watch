@@ -21,10 +21,20 @@ export async function GET() {
     .order("updated_at", { ascending: false })
     .limit(20);
 
-  return Response.json({ active: data || [], resolved: resolved || [] });
+  // Running total of unplanned outages recorded since Jan 1, 2026
+  const { count } = await db
+    .from("outages")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "unplanned")
+    .gte("start_time", "2026-01-01T00:00:00Z");
+
+  return Response.json({
+    active: data || [],
+    resolved: resolved || [],
+    stats: { year: 2026, total_outages: count || 0 },
+  });
 }
 
-// Add an outage (admin key validated inside Postgres)
 export async function POST(req) {
   const body = await req.json();
   const db = client();
@@ -35,15 +45,11 @@ export async function POST(req) {
   });
   if (error) {
     const unauthorized = /unauthorized/i.test(error.message);
-    return Response.json(
-      { error: unauthorized ? "unauthorized" : error.message },
-      { status: unauthorized ? 401 : 500 }
-    );
+    return Response.json({ error: unauthorized ? "unauthorized" : error.message }, { status: unauthorized ? 401 : 500 });
   }
   return Response.json({ ok: true });
 }
 
-// Update an outage (resolve etc.)
 export async function PATCH(req) {
   const body = await req.json();
   const db = client();
@@ -54,10 +60,7 @@ export async function PATCH(req) {
   });
   if (error) {
     const unauthorized = /unauthorized/i.test(error.message);
-    return Response.json(
-      { error: unauthorized ? "unauthorized" : error.message },
-      { status: unauthorized ? 401 : 500 }
-    );
+    return Response.json({ error: unauthorized ? "unauthorized" : error.message }, { status: unauthorized ? 401 : 500 });
   }
   return Response.json({ ok: true });
 }
