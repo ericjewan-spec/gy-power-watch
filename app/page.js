@@ -8,6 +8,16 @@ const TYPE_LABEL = {
   resolved: "Restored",
 };
 
+const GY_AREAS = [
+  "Georgetown", "Kitty", "Campbellville", "Alberttown", "Sophia", "Better Hope",
+  "Vryheid's Lust", "Beterverwagting", "Triumph", "Mon Repos", "Lusignan",
+  "Annandale", "Buxton", "Enmore", "Golden Grove", "Haslington", "Victoria",
+  "Cove and John", "Mahaica", "Diamond", "Grove", "Providence", "Eccles",
+  "Herstelling", "Soesdyke", "Timehri", "Vreed-en-Hoop", "Parika", "Leonora",
+  "Uitvlugt", "Tuschen", "New Amsterdam", "Rose Hall", "Corriverton", "Linden",
+  "Anna Regina", "Charity", "Bartica", "Lethem", "Mabaruma", "Port Kaituma",
+];
+
 function fmtDuration(ms) {
   if (ms < 0) ms = 0;
   const m = Math.floor(ms / 60000);
@@ -82,6 +92,8 @@ export default function Home() {
   const [fetchedAt, setFetchedAt] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [area, setArea] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [locating, setLocating] = useState(false);
   const [sending, setSending] = useState(false);
   const [reportMsg, setReportMsg] = useState("");
 
@@ -103,6 +115,31 @@ export default function Home() {
     return () => { clearInterval(tick); clearInterval(refresh); };
   }, []);
 
+  function openReport() {
+    setReportOpen(true);
+    setReportMsg("");
+    if (navigator.geolocation) {
+      setLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setCoords({ lat: latitude, lng: longitude });
+          try {
+            const r = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            const j = await r.json();
+            const suggestion = j.locality || j.city || "";
+            if (suggestion) setArea((prev) => prev || suggestion);
+          } catch {}
+          setLocating(false);
+        },
+        () => setLocating(false),
+        { timeout: 8000, maximumAge: 120000 }
+      );
+    }
+  }
+
   async function sendReport() {
     if (area.trim().length < 3) { setReportMsg("Enter your area (at least 3 letters)."); return; }
     setSending(true); setReportMsg("");
@@ -110,11 +147,19 @@ export default function Home() {
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ area: area.trim() }),
+        body: JSON.stringify({
+          area: area.trim(),
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+        }),
       });
       const j = await res.json().catch(() => ({}));
       if (res.ok) {
-        setReportMsg("Thanks — your report is on the board.");
+        setReportMsg(
+          j.merged
+            ? `Added to the ${j.area} outage — ${j.reports} reports now.`
+            : "Thanks — your report is on the board."
+        );
         setReportOpen(false);
         setArea("");
         load();
@@ -153,22 +198,32 @@ export default function Home() {
         </span>
       </div>
 
-      <div className="form-grid" style={{ paddingBottom: 6 }}>
+      {data?.stats && (
+        <p className="meta" style={{ paddingBottom: 10 }}>
+          {data.stats.total_outages} outage{data.stats.total_outages === 1 ? "" : "s"} recorded across Guyana in {data.stats.year}
+        </p>
+      )}
+
+      <div className="form-grid" style={{ paddingBottom: 6, paddingTop: 4 }}>
         {!reportOpen ? (
-          <button className="btn ghost" onClick={() => { setReportOpen(true); setReportMsg(""); }}>
+          <button className="btn ghost" onClick={openReport}>
             ⚡ No power in your area? Report it
           </button>
         ) : (
           <>
             <label>
-              Your area
+              Your area {locating ? "(finding your location…)" : ""}
               <input
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                placeholder="e.g. Better Hope, ECD"
+                placeholder="e.g. Better Hope"
                 maxLength={60}
+                list="gy-areas"
               />
             </label>
+            <datalist id="gy-areas">
+              {GY_AREAS.map((a) => <option key={a} value={a} />)}
+            </datalist>
             <button className="btn" onClick={sendReport} disabled={sending}>
               {sending ? "Sending…" : "Report outage"}
             </button>
