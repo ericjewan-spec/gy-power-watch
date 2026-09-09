@@ -18,6 +18,7 @@ export async function POST(req) {
   });
 
   if (error) {
+    if (/already_reported/i.test(error.message)) return Response.json({ error: "already_reported" }, { status: 409 });
     if (/rate_limited/i.test(error.message)) return Response.json({ error: "rate_limited" }, { status: 429 });
     if (/invalid_area/i.test(error.message)) return Response.json({ error: "invalid_area" }, { status: 400 });
     return Response.json({ error: error.message }, { status: 500 });
