@@ -28,10 +28,13 @@ export async function GET() {
     .eq("type", "unplanned")
     .gte("start_time", "2026-01-01T00:00:00Z");
 
+  const { data: leaderboard } = await db.rpc("blackout_leaderboard");
+
   return Response.json({
     active: data || [],
     resolved: resolved || [],
     stats: { year: 2026, total_outages: count || 0 },
+    leaderboard: leaderboard || [],
   });
 }
 
