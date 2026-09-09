@@ -217,6 +217,24 @@ export default function Home() {
         {reportMsg && <p className="notice">{reportMsg}</p>}
       </div>
 
+      {data?.leaderboard?.length > 0 && (
+        <>
+          <h2 className="section-h">🏆 2026 Blackout Leaderboard</h2>
+          <p className="meta" style={{ marginBottom: 10 }}>
+            Villages with the most reported blackouts this year
+          </p>
+          <div className="board">
+            {data.leaderboard.map((r, i) => (
+              <div key={r.area} className="lb-row">
+                <span className="lb-rank">{i === 0 ? "��" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
+                <span className="lb-area">{r.area}</span>
+                <span className="lb-count">{r.blackouts} blackout{r.blackouts === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <nav className="tabs" aria-label="Filter outages">
         {[
           ["all", "All"],
@@ -241,24 +259,6 @@ export default function Home() {
         </div>
       ) : (
         filtered.map((o) => <OutageCard key={o.id} o={o} now={now} />)
-      )}
-
-      {data?.leaderboard?.length > 0 && (
-        <>
-          <h2 className="section-h">🏆 2026 Blackout Leaderboard</h2>
-          <p className="meta" style={{ marginBottom: 10 }}>
-            Villages with the most reported blackouts this year
-          </p>
-          <div className="board">
-            {data.leaderboard.map((r, i) => (
-              <div key={r.area} className="lb-row">
-                <span className="lb-rank">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
-                <span className="lb-area">{r.area}</span>
-                <span className="lb-count">{r.blackouts} blackout{r.blackouts === 1 ? "" : "s"}</span>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {data?.resolved?.length > 0 && (
