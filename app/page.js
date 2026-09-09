@@ -36,24 +36,6 @@ function fmtWindow(start, end) {
   return s || "";
 }
 
-function DurationBadge({ o, now }) {
-  if (o.status === "resolved") return <span className="duration">restored</span>;
-  const start = o.start_time ? new Date(o.start_time).getTime() : null;
-  const end = o.end_time ? new Date(o.end_time).getTime() : null;
-
-  if (o.type === "unplanned" && start) {
-    return <span className="duration">{fmtDuration(now - start)} without power</span>;
-  }
-  if (start && start > now) {
-    return <span className="duration">starts in {fmtDuration(start - now)}</span>;
-  }
-  if (end && end > now) {
-    return <span className="duration">{fmtDuration(end - now)} remaining</span>;
-  }
-  if (start) return <span className="duration">{fmtDuration(now - start)} elapsed</span>;
-  return null;
-}
-
 function OutageCard({ o, now }) {
   const cls = o.status === "resolved" ? "resolved" : o.type;
   const long = o.details && o.details.length > 150 && o.details !== o.title;
@@ -61,7 +43,6 @@ function OutageCard({ o, now }) {
     <article className={`card ${cls}`}>
       <div className="card-top">
         <span className={`badge ${cls}`}>{o.status === "resolved" ? "Restored" : TYPE_LABEL[o.type]}</span>
-        <DurationBadge o={o} now={now} />
       </div>
       <h3>{o.title}</h3>
       <p className="meta">
@@ -157,12 +138,16 @@ export default function Home() {
       if (res.ok) {
         setReportMsg(
           j.merged
-            ? `Added to the ${j.area} outage — ${j.reports} reports now.`
-            : "Thanks — your report is on the board."
+            ? `🔦 ${j.area}: ${j.reports} reports and counting. Thanks for keeping Guyana informed!`
+            : `⚡ First to report ${j.area || "your area"}! It's on the board — share so neighbours can confirm.`
         );
         setReportOpen(false);
         setArea("");
         load();
+      } else if (j.error === "already_reported") {
+        setReportMsg("🙌 You already reported this blackout — we got you!");
+        setReportOpen(false);
+        setArea("");
       } else if (j.error === "rate_limited") {
         setReportMsg("Too many reports from your connection — try again later.");
       } else {
@@ -207,7 +192,7 @@ export default function Home() {
       <div className="form-grid" style={{ paddingBottom: 6, paddingTop: 4 }}>
         {!reportOpen ? (
           <button className="btn ghost" onClick={openReport}>
-            ⚡ No power in your area? Report it
+            ⚡ Blackout? Report it in 5 seconds
           </button>
         ) : (
           <>
@@ -256,6 +241,24 @@ export default function Home() {
         </div>
       ) : (
         filtered.map((o) => <OutageCard key={o.id} o={o} now={now} />)
+      )}
+
+      {data?.leaderboard?.length > 0 && (
+        <>
+          <h2 className="section-h">🏆 2026 Blackout Leaderboard</h2>
+          <p className="meta" style={{ marginBottom: 10 }}>
+            Villages with the most reported blackouts this year
+          </p>
+          <div className="board">
+            {data.leaderboard.map((r, i) => (
+              <div key={r.area} className="lb-row">
+                <span className="lb-rank">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
+                <span className="lb-area">{r.area}</span>
+                <span className="lb-count">{r.blackouts} blackout{r.blackouts === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {data?.resolved?.length > 0 && (

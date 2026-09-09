@@ -242,3 +242,19 @@ footer.site a { color: var(--green-dark); text-decoration: none; font-weight: 60
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Blackout leaderboard */
+.board { display: grid; gap: 6px; margin-bottom: 8px; }
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.lb-row:first-child { border-color: var(--gold); background: rgba(252, 209, 22, 0.1); }
+.lb-rank { font-size: 15px; min-width: 34px; font-weight: 700; color: var(--ink-dim); }
+.lb-area { font-weight: 600; }
+.lb-count { margin-left: auto; color: var(--red); font-weight: 700; font-size: 12.5px; }
